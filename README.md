@@ -1,5 +1,5 @@
 #EgressBuster
-Copyright 2015 EgressBuster
+Copyright 2015 TrustedSec - EgressBuster
 
 Written by: David Kennedy (ReL1K)
 
