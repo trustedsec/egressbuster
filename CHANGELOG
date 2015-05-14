@@ -1,0 +1,15 @@
+~~~~~~~~~~~~
+version 0.2
+~~~~~~~~~~~~
+
+* added full cd support so you can cd into directories with shells, etc. (thanks CG)
+* added ability to support all 65k ports, not just 1000 ports at a time. This will allow you to bust all ports all the time
+* added faster checking for ports for the egress bust
+* added optional flag for shell, so you can either A. just test ports or B. spawn a shell if a successful shell is established
+* added new binary and put it under debugger detection to kill process
+
+~~~~~~~~~~~~
+version 0.1
+~~~~~~~~~~~~
+
+* initial egress buster release
