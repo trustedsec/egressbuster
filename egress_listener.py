@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
 	try:
 		print "[*] Inserting iptables to redirect allports to port 10900"
-		subprocess.Popen(" iptables -t nat -A PREROUTING -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:10900" % (eth,ipaddr), shell=True).wait()
+		subprocess.Popen("iptables -t nat -A PREROUTING -p tcp --dport 1:65535 -j REDIRECT --to-port 10900", shell=True).wait()
 		# threaded server to handle multiple TCP connections
 		socketserver = ThreadedTCPServer(('', 10900), ThreadedTCPRequestHandler)
                 socketserver_thread = threading.Thread(target=socketserver.serve_forever)
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
 			except KeyboardInterrupt:
 				print "\n[*]Exiting, flushing iptables to remove entries."
-				subprocess.Popen("iptables -F", shell=True).wait()
+				subprocess.Popen("iptables -t nat -F", shell=True).wait()
 				sys.exit()
 	except Exception, e:
         	print "An issue occured, printing error: " + str(e)
