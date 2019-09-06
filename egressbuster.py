@@ -84,7 +84,6 @@ def start_socket(ipaddr, base_port, shell):
             while 1:
                 # receive shell command
                 data = sockobj.recv(1024).decode()
-                print(data)
                 # if its quit, then break out and close socket
                 if data == "quit":
                     break
@@ -123,7 +122,7 @@ def start_socket(ipaddr, base_port, shell):
 
 #    except Exception as e :
 #        print(e)
-#    pas through, ports closed
+#    pass through, ports closed
 #       pass
 
     finally:
