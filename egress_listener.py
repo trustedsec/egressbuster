@@ -106,9 +106,12 @@ if __name__ == "__main__":
         else:
             listening = srcipaddr
 
+        # Insert an iptables rule into the first line of the nat table's 
+        # PREROUTING chain, to ensure existing PREROUTING rules don't 
+        # cause unexpected behavior.
         print("[*] Inserting iptables rule to redirect connections from %s to **all TCP ports** to Egress Buster port %s/tcp" % (listening, port))
         ret = subprocess.Popen(
-            "iptables -t nat -A PREROUTING -s %s -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (srcipaddr, eth, ipaddr, port),
+            "iptables -t nat -I PREROUTING -s %s -i %s -p tcp  --dport 1:65535 -j DNAT --to-destination %s:%s" % (srcipaddr, eth, ipaddr, port),
             shell=True
         ).wait()
         if ret != 0:
